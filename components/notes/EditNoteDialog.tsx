@@ -1,29 +1,28 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-import { Sparkles, Loader2, Pencil } from 'lucide-react';
-import { toast } from 'sonner';
-import { enhanceNote } from '@/lib/openai';
-import { useNotesStore } from '@/store/useNotesStore';
-import { Note } from '@/lib/supabase';
+  SelectValue,
+} from "@/components/ui/select";
+import { Sparkles, Loader2, Pencil } from "lucide-react";
+import { toast } from "sonner";
+import { useNotesStore } from "@/store/useNotesStore";
+import { Note } from "@/lib/supabase";
 
 interface EditNoteDialogProps {
   note: Note;
@@ -33,24 +32,39 @@ export function EditNoteDialog({ note }: EditNoteDialogProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
-  const [color, setColor] = useState(note.color || 'default');
+  const [color, setColor] = useState(note.color || "default");
   const [isEnhancing, setIsEnhancing] = useState(false);
 
   const { updateNote } = useNotesStore();
 
   const handleEnhance = async () => {
     if (!content.trim()) {
-      toast.error('No content to enhance');
+      toast.error("No content to enhance");
       return;
     }
 
     setIsEnhancing(true);
     try {
-      const enhanced = await enhanceNote(content);
-      setContent(enhanced);
-      toast.success('Note enhanced');
-    } catch {
-      toast.error('Enhancement failed');
+      const res = await fetch("/api/ai/enhance", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content }),
+      });
+
+      const data = await res.json();
+      console.log("Enhance response:", data);
+
+      if (!res.ok || !data.content) {
+        throw new Error(data.error || "No result from AI");
+      }
+
+      setContent(data.content);
+      toast.success("Note enhanced");
+    } catch (error) {
+      console.error("Enhance error:", error);
+      toast.error("Enhancement failed");
     } finally {
       setIsEnhancing(false);
     }
@@ -58,17 +72,17 @@ export function EditNoteDialog({ note }: EditNoteDialogProps) {
 
   const handleSave = async () => {
     if (!title.trim() && !content.trim()) {
-      toast.error('Please add some content');
+      toast.error("Please add some content");
       return;
     }
 
     await updateNote(note.id, {
-      title: title.trim() || 'Untitled',
+      title: title.trim() || "Untitled",
       content: content.trim(),
-      color
+      color,
     });
 
-    toast.success('Note updated');
+    toast.success("Note updated");
     setOpen(false);
   };
 
@@ -76,7 +90,7 @@ export function EditNoteDialog({ note }: EditNoteDialogProps) {
     setOpen(false);
     setTitle(note.title);
     setContent(note.content);
-    setColor(note.color || 'default');
+    setColor(note.color || "default");
   };
 
   return (
@@ -165,7 +179,10 @@ export function EditNoteDialog({ note }: EditNoteDialogProps) {
             <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              onClick={handleSave}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               Save Changes
             </Button>
           </div>

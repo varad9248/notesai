@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotesStore } from "@/store/useNotesStore";
-import { answerQuestionFromNotes } from "@/lib/openai";
 import { MessageCircle, Send, Bot, User, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
@@ -50,7 +49,7 @@ export function ChatDialog({ children }: ChatDialogProps) {
     if (!question.trim() || isLoading) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       content: question.trim(),
       isUser: true,
       timestamp: new Date(),
@@ -61,11 +60,24 @@ export function ChatDialog({ children }: ChatDialogProps) {
     setIsLoading(true);
 
     try {
-      const answer = await answerQuestionFromNotes(question.trim(), notes);
+      const res = await fetch("/api/ai/answer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          question: question.trim(),
+          notes,
+        }),
+      });
+
+      const data = await res.json();
+
+      console.log("AI response:", data);
 
       const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: answer,
+        id: crypto.randomUUID(),
+        content: data.content || "Sorry, I couldn't find an answer.",
         isUser: false,
         timestamp: new Date(),
       };

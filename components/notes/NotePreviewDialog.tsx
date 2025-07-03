@@ -1,31 +1,30 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-import { useNotesStore } from '@/store/useNotesStore';
-import { generateNoteFromPrompt } from '@/lib/openai';
-import { Plus, Sparkles, Loader2, Eye } from 'lucide-react';
-import { toast } from 'sonner';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+  SelectValue,
+} from "@/components/ui/select";
+import { useNotesStore } from "@/store/useNotesStore";
+import { Plus, Sparkles, Loader2, Eye } from "lucide-react";
+import { toast } from "sonner";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface CreateNoteDialogProps {
   children: React.ReactNode;
@@ -33,58 +32,76 @@ interface CreateNoteDialogProps {
 
 export function CreateNoteDialog({ children }: CreateNoteDialogProps) {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [color, setColor] = useState('default');
-  const [aiPrompt, setAiPrompt] = useState('');
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [color, setColor] = useState("default");
+  const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const { addNote } = useNotesStore();
+  const { addNote, generateNote } = useNotesStore();
 
   const handleSave = async () => {
     if (!title.trim() && !content.trim()) {
-      toast.error('Please add some content to your note');
+      toast.error("Please add some content to your note");
       return;
     }
 
     const note = await addNote({
-      title: title.trim() || 'Untitled',
+      title: title.trim() || "Untitled",
       content: content.trim(),
       color,
       is_pinned: false,
-      user_id: '',
+      user_id: "",
     });
 
     if (note) {
-      toast.success('Note created successfully');
+      toast.success("Note created successfully");
       handleClose();
     } else {
-      toast.error('Failed to create note');
+      toast.error("Failed to create note");
     }
   };
 
   const handleClose = () => {
-    setTitle('');
-    setContent('');
-    setColor('default');
-    setAiPrompt('');
+    setTitle("");
+    setContent("");
+    setColor("default");
+    setAiPrompt("");
     setOpen(false);
   };
 
   const handleGenerateWithAI = async () => {
     if (!aiPrompt.trim()) {
-      toast.error('Please enter a prompt for AI generation');
+      toast.error("Please enter a prompt for AI generation");
       return;
     }
 
     setIsGenerating(true);
     try {
-      const generatedContent = await generateNoteFromPrompt(aiPrompt);
+      const response = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.result) {
+        throw new Error(data.error || "AI generation failed");
+      }
+
+      const generatedContent = data.result;
+
       setContent(generatedContent);
-      setTitle(aiPrompt.slice(0, 50) + (aiPrompt.length > 50 ? '...' : ''));
-      toast.success('Note generated with AI');
-    } catch {
-      toast.error('Failed to generate note with AI');
+      setTitle(aiPrompt.slice(0, 50) + (aiPrompt.length > 50 ? "..." : ""));
+      toast.success("Note generated with AI");
+    } catch (error) {
+      console.error("AI generation error:", error);
+      toast.error("Failed to generate note with AI");
     } finally {
       setIsGenerating(false);
     }
@@ -101,7 +118,10 @@ export function CreateNoteDialog({ children }: CreateNoteDialogProps) {
         <div className="space-y-4">
           {/* AI Section */}
           <div className="border border-purple-200 rounded-lg p-4 bg-gradient-to-r from-purple-50 to-pink-50">
-            <Label htmlFor="ai-prompt" className="flex items-center space-x-2 text-purple-700 font-medium">
+            <Label
+              htmlFor="ai-prompt"
+              className="flex items-center space-x-2 text-purple-700 font-medium"
+            >
               <Sparkles className="h-4 w-4" />
               <span>Generate with AI</span>
             </Label>
@@ -113,8 +133,17 @@ export function CreateNoteDialog({ children }: CreateNoteDialogProps) {
                 onChange={(e) => setAiPrompt(e.target.value)}
                 className="flex-1"
               />
-              <Button onClick={handleGenerateWithAI} disabled={isGenerating} size="sm" className="bg-purple-600 hover:bg-purple-700">
-                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              <Button
+                onClick={handleGenerateWithAI}
+                disabled={isGenerating}
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {isGenerating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>
@@ -189,7 +218,10 @@ export function CreateNoteDialog({ children }: CreateNoteDialogProps) {
             <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              onClick={handleSave}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create Note
             </Button>
