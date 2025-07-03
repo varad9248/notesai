@@ -12,7 +12,6 @@ if (!process.env.NEXT_PUBLIC_AI_API_KEY) {
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: process.env.NEXT_PUBLIC_AI_API_KEY,
-  dangerouslyAllowBrowser: process.env.NODE_ENV === "development",
   defaultHeaders: {
     "HTTP-Referer": "https://your-site-url.com", // 🔁 Replace with your actual URL
     "X-Title": "NoteAI", // 🔁 Replace with your actual app name
