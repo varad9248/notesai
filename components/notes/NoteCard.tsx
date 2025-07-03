@@ -71,7 +71,7 @@ export function NoteCard({ note }: NoteCardProps) {
               components={{
                 a: (props) => <a {...props} className="text-blue-600 dark:text-blue-400 underline" target="_blank" rel="noopener noreferrer" />,
                 code: ({node, ...props}) =>
-                  node && node.type === 'inlineCode' ? (
+                  node ? (
                     <code className="bg-gray-100 dark:bg-zinc-800 text-red-600 dark:text-red-400 px-1 py-0.5 rounded">
                       {props.children}
                     </code>
